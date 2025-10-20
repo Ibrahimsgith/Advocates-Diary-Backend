@@ -1,53 +1,61 @@
-import { Router } from 'express';
-import Client from '../models/client.model.js';
+import { Router } from "express";
+import * as db from "../localdb.js";
 
 const router = Router();
-
-/**
- * TEMP: Public (no auth). When you add login, re-enable:
- *   import { authRequired } from '../middleware/auth.js';
- *   router.use(authRequired);
- */
+const TABLE = "clients";
 
 // Create
-router.post('/', async (req, res, next) => {
+router.post("/", async (req, res, next) => {
   try {
-    const created = await Client.create(req.body);
+    const { name, phone, email, address, notes } = req.body || {};
+    if (!name || !String(name).trim()) {
+      return res.status(400).json({ error: "Client name is required" });
+    }
+    const created = await db.create(TABLE, {
+      name: String(name).trim(),
+      phone: phone ?? "",
+      email: email ?? "",
+      address: address ?? "",
+      notes: notes ?? ""
+    });
     res.status(201).json(created);
-  } catch (err) { next(err); }
+  } catch (e) { next(e); }
 });
 
 // List
-router.get('/', async (_req, res, next) => {
+router.get("/", async (_req, res, next) => {
   try {
-    const list = await Client.find().sort({ createdAt: -1 });
-    res.json(list);
-  } catch (err) { next(err); }
+    const rows = await db.list(TABLE);
+    rows.sort((a,b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+    res.json(rows);
+  } catch (e) { next(e); }
 });
 
 // Get one
-router.get('/:id', async (req, res, next) => {
+router.get("/:id", async (req, res, next) => {
   try {
-    const item = await Client.findById(req.params.id);
-    if (!item) return res.status(404).json({ error: 'Not found' });
+    const item = await db.get(TABLE, req.params.id);
+    if (!item) return res.status(404).json({ error: "Not found" });
     res.json(item);
-  } catch (err) { next(err); }
+  } catch (e) { next(e); }
 });
 
 // Update
-router.put('/:id', async (req, res, next) => {
+router.put("/:id", async (req, res, next) => {
   try {
-    const updated = await Client.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const updated = await db.update(TABLE, req.params.id, req.body || {});
+    if (!updated) return res.status(404).json({ error: "Not found" });
     res.json(updated);
-  } catch (err) { next(err); }
+  } catch (e) { next(e); }
 });
 
 // Delete
-router.delete('/:id', async (req, res, next) => {
+router.delete("/:id", async (req, res, next) => {
   try {
-    await Client.findByIdAndDelete(req.params.id);
+    const ok = await db.remove(TABLE, req.params.id);
+    if (!ok) return res.status(404).json({ error: "Not found" });
     res.status(204).send();
-  } catch (err) { next(err); }
+  } catch (e) { next(e); }
 });
 
 export default router;

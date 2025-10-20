@@ -1,0 +1,15 @@
+const API = import.meta.env.VITE_API_URL || "http://localhost:8080";
+
+export async function api(path: string, options: RequestInit = {}) {
+  const headers = {
+    "Content-Type": "application/json",
+    ...(options.headers || {}),
+  };
+  const res = await fetch(`${API}${path}`, { ...options, headers });
+  if (!res.ok) {
+    // surface the status so your UI can show a friendly message
+    const text = await res.text().catch(() => "");
+    throw new Error(`${res.status} ${text || res.statusText}`);
+  }
+  return res.json();
+}

@@ -1,51 +1,40 @@
-import { Router } from 'express';
-import Client from '../models/client.model.js';
-import Case from '../models/case.model.js';
-import Hearing from '../models/hearing.model.js';
+import { Router } from "express";
+import * as db from "../localdb.js";
 
 const router = Router();
 
-/**
- * PUBLIC: Returns numbers for dashboard cards.
- * Later, you can enforce auth by importing authRequired and adding:
- *   router.use(authRequired);
- */
-router.get('/', async (_req, res, next) => {
+/** Public dashboard snapshot */
+router.get("/", async (_req, res, next) => {
   try {
+    const [clients, cases, hearings] = await Promise.all([
+      db.list("clients"),
+      db.list("cases"),
+      db.list("hearings")
+    ]);
+
+    const activeMatters = cases.filter(c => c.status === "ACTIVE").length;
+    const filingsPending = cases.filter(c => c.status === "PENDING").length;
+
     const now = new Date();
     const endOfWeek = new Date(now);
     endOfWeek.setDate(now.getDate() + (7 - now.getDay() || 7));
-
-    const [clients, casesTotal, activeMatters, filingsPending, hearingsThisWeek] =
-      await Promise.all([
-        Client.countDocuments(),
-        Case.countDocuments(),
-        Case.countDocuments({ status: 'ACTIVE' }),
-        Case.countDocuments({ status: 'PENDING' }), // adjust if you track filings differently
-        Hearing.countDocuments({ date: { $gte: now, $lte: endOfWeek } }),
-      ]);
+    const hearingsThisWeek = hearings.filter(h => {
+      if (!h.date) return false;
+      const d = new Date(h.date);
+      return d >= now && d <= endOfWeek;
+    }).length;
 
     res.json({
       stats: {
-        clients,
-        cases: casesTotal,
+        clients: clients.length,
+        cases: cases.length,
         activeMatters,
         hearingsThisWeek,
         filingsPending,
-        teamUtilisation: 0, // update when you have real utilisation logic
-      },
+        teamUtilisation: 0
+      }
     });
-  } catch (err) {
-    next(err);
-  }
-});
-
-/**
- * OPTIONAL (disabled): If your UI’s “Save metrics” posts to /api/portal,
- * you can return 501 for now until auth/UI is ready.
- */
-router.post('/', (_req, res) => {
-  res.status(501).json({ error: 'Saving metrics not enabled yet' });
+  } catch (e) { next(e); }
 });
 
 export default router;

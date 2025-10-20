@@ -7,6 +7,7 @@ import authRoutes from './src/routes/auth.routes.js';
 import caseRoutes from './src/routes/case.routes.js';
 import clientRoutes from './src/routes/client.routes.js';
 import hearingRoutes from './src/routes/hearing.routes.js';
+import portalRoutes from './src/routes/portal.routes.js';
 
 dotenv.config();
 const app = express();
@@ -25,6 +26,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/cases', caseRoutes);
 app.use('/api/clients', clientRoutes);
 app.use('/api/hearings', hearingRoutes);
+app.use('/api/portal', portalRoutes);
 
 // Error handler
 // eslint-disable-next-line no-unused-vars
